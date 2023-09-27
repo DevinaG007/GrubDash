@@ -53,6 +53,15 @@ function dishesIsValid(req, res, next){
     }
     next({status: 400, message: `Order must include at least one dish`})
 }
+
+function statusIsValid(req, res, next){
+    const validStatus = ["pending", "preparing", "out-for-delivery", "delivered"];
+    const {data: {status} = {}} = req.body;
+    if (validStatus.includes(status)){
+       next()
+    }
+    next({status: 400, message: `Order must have a status of pending, preparing, out-for-delivery, delivered`})
+}
 function hasBodyProperty(propertyName){
     return function(req, res, next){
         const {data = {}} = req.body;
@@ -78,13 +87,26 @@ function create(req, res, next) {
 }
 
 function update(req, res, next){
+    const {orderId} = req.params;
     const order = res.locals.order;
-    const {data: {deliverTo, mobileNumber, status, dishes} = {}} = req.body;
+    const {data: {id, deliverTo, mobileNumber, status, dishes} = {}} = req.body;
+    if (!id || orderId === id){
     order.deliverTo = deliverTo;
     order.mobileNumber = mobileNumber;
     order.status = status;
     order.dishes = dishes;
     res.json({data: order})
+}
+    next({status: 400, message: `Order id does not match route id. Order: ${id}, Route: ${orderId}`})
+}
+
+function destroy(req, res, next){
+    const orderToDelete = res.locals.order;
+    const index = orders.findIndex((order) => orderToDelete.id === order.id);
+    if(orderToDelete.status === "pending"){
+    const deletedOrder = orders.splice(index, 1)
+    res.sendStatus(204)}
+    next({status: 400, message: `An order cannot be deleted unless it is pending.`})
 }
 
 // TODO: Implement the /orders handlers needed to make the tests pass
@@ -105,9 +127,11 @@ update: [
     hasBodyProperty("mobileNumber"),
     hasBodyProperty("dishes"), 
     hasBodyProperty("status"),
+    statusIsValid,
     deliverToIsValid,
     mobileNumberIsValid,
     dishesIsValid, 
     update  
-]
+], 
+delete: [orderExists, destroy]
 };
