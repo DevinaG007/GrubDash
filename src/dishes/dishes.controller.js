@@ -5,10 +5,13 @@ const dishes = require(path.resolve("src/data/dishes-data"));
 // Use this function to assign ID's when necessary
 const nextId = require("../utils/nextId");
 
-function list(req, res, next) {
+//handles GET HTTP method for all dishes
+function list(req, res) {
   res.json({ data: dishes });
 }
 
+//middleware function to check if dish Id exists
+//stores found dish in res.locals to pass to handler functions
 function dishExists(req, res, next) {
   const { dishId } = req.params;
   const foundDish = dishes.find((dish) => dish.id === dishId);
@@ -19,10 +22,12 @@ function dishExists(req, res, next) {
   next({ status: 404, message: `Dish does not exist: ${dishId}.` });
 }
 
+////handles GET HTTP method for a single dish
 function read(req, res, next) {
   res.json({ data: res.locals.dish });
 }
 
+//middleware function checks if request body has necessary properties
 function bodyDataHas(propertyName) {
   return function (req, res, next) {
     const { data = {} } = req.body;
@@ -33,26 +38,7 @@ function bodyDataHas(propertyName) {
   };
 }
 
-function namePropertyIsValid(req, res, next) {
-  const {
-    data: { name },
-  } = req.body;
-  if (name) {
-    return next();
-  }
-  next({ status: 400, message: `Dish must include a name` });
-}
-
-function descriptionPropertyIsValid(req, res, next) {
-  const {
-    data: { description },
-  } = req.body;
-  if (description) {
-    return next();
-  }
-  next({ status: 400, message: `Dish must include a description` });
-}
-
+//middleware function validates if price property is valid
 function pricePropertyIsValid(req, res, next) {
   const {
     data: { price },
@@ -66,16 +52,8 @@ function pricePropertyIsValid(req, res, next) {
   });
 }
 
-function imageUrlPropertyIsValid(req, res, next) {
-  const {
-    data: { image_url },
-  } = req.body;
-  if (image_url) {
-    return next();
-  }
-  next({ status: 400, message: `Dish must include a image_url` });
-}
-function create(req, res, next) {
+//handles POST HTTP method
+function create(req, res) {
   const newId = nextId();
   console.log(newId);
   const { data: { name, description, price, image_url } = {} } = req.body;
@@ -90,6 +68,7 @@ function create(req, res, next) {
   res.status(201).json({ data: newDish });
 }
 
+//handles PUT HTTP method
 function update(req, res, next) {
   const { dishId } = req.params;
   const dish = res.locals.dish;
@@ -107,6 +86,7 @@ function update(req, res, next) {
     message: `Dish id does not match route id. Dish: ${id}, Route: ${dishId}`,
   });
 }
+
 module.exports = {
   list,
   read: [dishExists, read],
@@ -115,10 +95,7 @@ module.exports = {
     bodyDataHas("description"),
     bodyDataHas("price"),
     bodyDataHas("image_url"),
-    namePropertyIsValid,
-    descriptionPropertyIsValid,
     pricePropertyIsValid,
-    imageUrlPropertyIsValid,
     create,
   ],
   update: [
@@ -127,10 +104,7 @@ module.exports = {
     bodyDataHas("description"),
     bodyDataHas("price"),
     bodyDataHas("image_url"),
-    namePropertyIsValid,
-    descriptionPropertyIsValid,
     pricePropertyIsValid,
-    imageUrlPropertyIsValid,
     update,
   ],
 };
